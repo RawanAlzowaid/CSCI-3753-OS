@@ -1,0 +1,67 @@
+1.(+15) Suppose we have a round-robin scheduler in the OS kernel of a  preemptively time sliced system, and three programs in its ready queue:  P1, P2, and P3. P1 takes 10 seconds to complete, P2 takes 8.5 seconds,  and P3 takes 3 seconds. Suppose the time slice is 2 seconds, and the  overhead for OS context switching is 0.2 seconds. If P1 starts executing first at time 0, when do each of the programs finish executing? Draw a  timeline of execution. What is the percentage overhead due to context  switching? Assume that a process that finishes early transfers control  back to the OS scheduler.  
+
+P1: 0-2 | 6.6-8.6 | 12.2-14.2 | 16.6-18.6 | 21-23 |  
+P2: 2.2-4.2 | 8.8-10.8 | 14.4-16.4 | 18.8-20.8 | 23.2-23.7 |  
+P3: 4.4-6.4 | 11-12  
+
+
+P1 = 23seconds  
+P2 = 23.7 seconds  
+P3 = 12 seconds  
+% overhead = 0.2/(0.2+2) = 9.09  
+
+
+2.(+15) Repeat above for a batch mode multiprogrammed OS. Which  system, preemptively multitasked or batch mode multiprogrammed finished  execution of all three programs the fastest? Under what conditions might the reverse be true?  
+P1: 0 - 10  
+P2: 10.2 - 18.7  
+P3: 18.9 - 21.9  
+
+
+P1 = 10 sec  
+P2 = 18.7 sec  
+P3 = 21.9 sec  
+overhead = 1.826%  
+Batch mode is faster because less context-switching overhead, but could be slower if there are multiple blocks on I/O  
+
+
+3.(+15) Explain the differences between the four different kinds of  exceptions found in an OS exception table. What is a software interrupt, and how does that differ from a hardware interrupt?  
+  
+
+TRAPS: are intentionally invoked by an application, e.g. a system call,yielding control to the OS, which then consults the jump table todetermine which system call trap handler to execute  
+INTERRUPTS: hardware device notifies the processor when it has completedits I/O operations, causing the OS to invoke the correct interrupt handler  
+FAULT: divided by 0 error  
+ABORT: error that is not recoverable, e.g. hardware bus failure  
+
+a software interrupt is essentially a trap to the OS kernel that isinitiated in user space by an application, e.g. by a system callyielding control to the OS, whereas a hardware interrupt is initiated bya hardware device upon completion of I/O. In both cases, control ispassed to the OS kernel, which consults a jump table to determine which handler to invoke.  
+
+
+4.(+10) What role does the jump table play in executing a system call?
+
+Once a system call executes, control is passed to the OS via anappropriately parameterized trap instruction, which causes the OS kernelto run and consult the jump table to determine which handler code shouldbe executed to process the system call, i.e. to which handler should theOS jump.
+
+
+5.(+15) Explain in what way overlapping I/O with CPU processing is  advantageous. Explain two ways that I/O can be overlapped with CPU  execution and how they are each an improvement over not overlapping I/O  with the CPU.  
+
+By overlapping I/O with CPU, we can more efficiently use both theCPU and I/O devices in parallel, so that overall run time is reduced.Any of the following answers are acceptable:  
+
+Some sample answers:  
+1) considering only a single process, we can implement asynchronous ornon-blocking I/O. In this case, a process makes for example a write()call to a disk. If the write is not able to finish immediately, thencontrol returns back to the process, which can continue wih otherprocessing. In the meantime, the disk device can proceed with the I/Owrite and signal the process with an interrupt when it is complete.this is efficient overlapping of I/O and CPU within a process.  
+
+2) if an OS supports preemptive time-sliced multitasking, and if thereare two processes, then one process blocking on I/O will not prevent thesecond process from continuing execution. This is also efficient usageand overlapping of I/O and CPU.  
+
+3) while waiting for a device to finish an I/O operation, say a write(),the OS can either inefficiently spin in a polling loop (direct I/O withpolling), which chews up CPU time that could be used for otherprocesses, or the OS can more efficiently implement interrupts thatfrees the CPU to execute other processes until an interrupt arrives(direct I/O with interrupts  
+
+4) DMA with interrupts is even more efficient than direct I/O withinterrupts, because the CPU (and execution of processes on the CPU) isnot interrupted in the worst case by every single byte transferredbetween a device and RAM. In DMA, only one interrupt arrives at the endof the bulk data transfer between a device and RAM.  
+
+
+6.(+30) Describe each step of a write() operation to disk, from the  application first calling a write() through the OS processing the  write() to the final return from the write() call upon completion of the disk operation. Assume interrupt driven I/O operation. You may draw and label a figure if you'd like. Your answer should include components  such as the device controller, interrupt handler, device handler, device driver, and any other OS components you deem appropriate to add.  
+
+
+1> The process requests a write operation to the disk, let's say ablocking system call to the OS, which transfers control to the OS. The jump table is consulted, and the appropriate system callcode isexecuted, eventually calling the write driver.  
+2> The write driver checks the status of the disk’s device controller to see ifthe disk is idle. If the device is busy, the driver waits until the disk is idle.  
+3>Driver stores an output command into the command register on thedisk’s device controller, and writes data from memory into theappropriate buffers in the disk controller, thereby starting the device.  
+4> After the driver ends whatever operations it needs to perform, it storesinformation relative to the disk’s current process (calling function’s returnaddress, special flags, etc.) in the device status table. Device managerinvokes the scheduler to allow another process to use the CPU and thenterminates.  
+5>W hen disk finally finishes its operation, it interrupts the CPU, invokingthe interrupt handler.  
+6>The interrupt handler determines that the disk created the interrupt,thereby invoking the disk’s device handler.  
+7>The device handler retrieves the saved process information from theDevice Status table, e.g. the calling process, and also retrieves thestatus information from the disk controller's status registers.  
+8>The device handler passes all status information to the callingprocess, e.g. the write has completed.9>Device handler executes a final return instruction, allowing the process tocontinue execution starting at the instruction after the write system call.
