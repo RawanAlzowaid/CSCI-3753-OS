@@ -1,3 +1,203 @@
-1. (+25) There is a one-lane  east-west bridge in Hawaii such that when a car is on the bridge going  eastbound, no westbound cars are allowed until the eastbound car has  left the bridge.  Similarly when a westbound car is on the bridge, no  eastbound cars are allowed until the westbound car has left the bridge.  To make matters more complicated, if an eastbound car arrives and sees  another eastbound car already on the bridge, then that eastbound car  will also proceed onto the bridge.  This is true even if there is a  westbound car already waiting to enter the bridge.  Similarly, a  westbound car can tailgate behind another westbound car already on the  bridge even if an eastbound car was waiting.   Deign a synchronization  solution using only locks, semaphores and integer variables that  achieves the following: allows all cars bound in a certain direction to  continue crossing as long as there is at least one car still on the  bridge that is bound in that direction, then toggles to allow all cars  in the opposite direction to proceed in a similar manner.  The solution  need not be starvation-free.Answer: This problem resembles the 2nd Readers/Writers Problem, where we can model west-bound and east-bound cars as two different types of readers.  Here is a solution:int westcount=0, eastcount=0;Semaphore bridgemutex=1, mutex1=1, mutex2=1;Westbound:P(mutex1)westcount++;if (westcount==1) P(bridgemutex);V(mutex1)// Cross bridge westboundP(mutex1)westcount--;if (westcount==0) V(bridgemutex);V(mutex1)Eastbound:P(mutex2)eastcount++;if (eastcount==1) P(bridgemutex)V(mutex2)// Cross bridge eastboundP(mutex2)eastcount--;if (eastcount==0) V(bridgemutex)V(mutex2)2. (+15) Suppose task T1 has code C1  that must execute before task T2's code C2.  Design a solution that  enforces this ordering using only condition variables, locks, and  integer variables.  Semaphores and monitors are not allowed.  
+1. (+25) There is a one-lane  east-west bridge in Hawaii such that when a car is on the bridge going  eastbound,   
+no westbound cars are allowed until the eastbound car has  left the bridge.  Similarly when a westbound car is on the bridge,  
+no  eastbound cars are allowed until the westbound car has left the bridge.  To make matters more complicated, if an eastbound car  
+arrives and sees  another eastbound car already on the bridge, then that eastbound car  will also proceed onto the bridge.  
+This is true even if there is a  westbound car already waiting to enter the bridge.  
+Similarly, a  westbound car can tailgate behind another westbound car already on the  bridge even if an eastbound car was waiting.  
+Deign a synchronization  solution using only locks, semaphores and integer variables that  achieves the following:  
+allows all cars bound in a certain direction to  continue crossing as long as there is at least one car still on the  bridge  
+that is bound in that direction, then toggles to allow all cars  in the opposite direction to proceed in a similar manner.  
+The solution  need not be starvation-free.Answer: This problem resembles the 2nd Readers/Writers Problem, where we can model  
+west-bound and east-bound cars as two different types of readers.  
+Here is a solution:int westcount=0, eastcount=0;Semaphore bridgemutex=1, mutex1=1, mutex2=1;  
+Westbound: P(mutex1)westcount++;  
+if (westcount==1)  
+    P(bridgemutex);  
+V(mutex1)// Cross bridge  
+westboundP(mutex1)westcount--;    
+if (westcount==0)  
+    V(bridgemutex);  
+V(mutex1)  
+Eastbound: 
+P(mutex2)  
+eastcount++;  
+if (eastcount==1)  
+P(bridgemutex)V(mutex2)//  Cross bridge   
+eastboundP(mutex2)  
+eastcount--;  
+if (eastcount==0)   
+    V(bridgemutex)  
+V(mutex2)  
 
-Answer: This problem addresses the issue of signaling a CV before another task has  blocked waiting on a CV.  In order to deal with that problem, we have to add state similar to a semaphore in the form of an integer variable so that we can remember that there has been a signal.   Here is a solution for pthreads that uses pthread_cond_wait():int signalstate=0;  // shared state that remembers there has been a signalLock mutex;ConditionVariable CV;T1:C1;lock(mutex); signalstate++; unlock(mutex); signal(CV);T2:lock(mutex); while(!signalstate) {pthread_cond_wait(&CV, &mutex);} unlock(mutex);C2;--pthread_cond_wait()'s behavior is critical to making this solution work.  pthread_cond_wait() atomically releases mutex and causes the calling thread to block on the condition variable CV.  Atomically here means "atomically with respect to access by another  thread to the mutex and then the condition variable". That is, if another thread is able to acquire the mutex after the about-to-block thread has released it, then a subsequent call to pthread_cond_signal() in that thread behaves as if it were issued after the about-to-block thread has blocked.  This behavior is important because  if the mutex is released inside pthread_cond_wait() by say thread X,  then the other thread Y could begin and signal the CV before X's  pthread_cond_wait() is able to call wait on the CV, thereby causing X to wait forever on the CV.  Instead, pthread_cond_wait() has the behavior that it performs two operations atomically (releasing the mutex *and* blocking on the CV).  Hence, if X is within pthread_cond_wait(), it is not possible for Y to grab the mutex and signal the CV before X blocks, which would block X forever.  Thus, X does not block forever.3. (+15) Explain why the solution to the 3rd Readers/Writers problem is starvation-free.Answer: The starvation-free solution to the 2nd R/W problem, also called the 3rd R/W problem, simply adds a readBlock semaphore initialized to 1 to the 1st R/W problem.  The solution is given on slide 27 of the Chapter 5.3 slides, repeated below.  The 1st R/W problem is already starvation-free for readers, but not for writers.  The addition of readBlock creates a solution that is also starvation-free for writers.  This is because if a writer arrives while there are multiple current readers, then the writer will grab readBlock and sleep on wrt, which is held by the current readers.  Future readers will block on readBlock.  When the last current reader is done, it will signal the wrt lock, which wakes the writer so it can proceed.  When the writer is done, it signals readBlock, which wakes any blocked readers so they can start reading.  Thus, writers are no longer starved.Semaphore wrt=1, mutex=1, readBlock=1;int readcount=0;Writer:while(1) {   wait(readBlock);      wait(wrt);      // writing      signal(wrt);   signal(readBlock);}Reader:while(1) {   wait(readBlock);      wait(mutex);         readcount++;         if (readcount==1) wait(wrt);      signal(mutex);   signal(readBlock);   // reading   wait(mutex);      readcount--;      if (readcount==0) signal(wrt);   signal(mutex);}4. a. (+10) Is the swap() function below thread-safe or not?  Explain your reasoning.int temp; void swap(int *y, int *z){    int local;     local = temp;    temp = *y;    *y = *z;    *z = temp;    temp = local;}Answer: Swap is not thread-safe, because it is using a global variable temp.  For example, suppose thread T1 called swap(&m,&n), where *m=1 and *n=2, and thread T2 called swap(&q,&r) where *q=7 and *r=4.  Let T1 execute inside swap(), up to just before the line *z=temp.  At this point, temp=*y=1, and T1 desires to set *z=1 to complete the swap.  But if T1 is interrupted at this point, then T2 executes, then T2 sets temp=*y=7.  Now suppose T1 context switches back in, and executes *z=temp=7.  So the output of the swap() does not swap the values 1 and 2, but instead produces a value of 7 for one of the variables.  Hence, the code is not thread safe.b.  (+10) Suppose the swap() function above is called by the interrupt service  routine (ISR) below.  Assume that if swap() is interrupted during normal execution, the ISR below is called and calls swap() again, reentering  swap() and executing in the context of the interrupted thread.  Is  swap() reentrant?  Explain your reasoning.void interrupt_service_routine(){    int a = 1, b = 2;    swap(&a, &b);}Answer:  This interrupt service routine is reentrant. We have to imagine two control flows: normal control flow of the program's execution, which calls swap(); and exceptional control flow caused by say an interrupt, which triggers the interrupt service routine to run, which also calls swap().  Suppose the first call to swap() by normal control flow of the executing program was to swap two numbers, say 7 and 10.  Assume the entry value of the global variable temp was 5.  The expectation at the end of the routine is that the global variable is returned to its initial value 5, and that the two numbers 7 and 10 are swapped correctly.  Now suppose in the middle of swap() an interrupt occurs.  This would eventually trigger the interrupt_service_routine() to execute, which would call swap() again, reentering it with new values of 1 and 2.  We assume in terms of reentrancy analysis that only this one thread can modify the global variable temp, and there are no other threads.   The value of the global variable temp may no longer be 5 due to the swap proceeding, e.g. if the swap() is interrupted after the line temp=*y, then temp's value is no longer 5, and in this example would be 7.  The second call to swap() must swap 1 and 2, and restore the global variable of temp upon exit to 7.  The 2nd call to swap() has its own local variable, which is set to 7 to save the global variable.  The middle three lines swap the values 1 and 2 correctly using temp, then temp is restored correctly on exit by temp=local.  Does the exceptional control flow's reentry of swap() adversely affect the normal control flow's execution in swap()?  No, because the normal control flow has its own local variable and own parameters passed into it on the stack, namely the values 7 and 10.   Its local variable takes a snapshot of the current value of global temp as it entered, which is 5.  If swap() is interrupted at any point thereafter, the exceptional control flow will completely finish before the normal control flow is allowed to resume execution, and the exceptional control flow will restore the value of temp to what it was at the point of interruption, say 7, as we saw above.  Therefore, the normal control flow's swap() will proceed using the correct value of temp to correctly complete the swap of the numbers 7 and 10, and restore the global temp to 5 upon exit.  The code is reentrant.5. (+10) Suppose you are asked to design a server application consisting of two  processes P1 and P2, such that (1) P2 is to sleep until woken up by P1,  whereupon (2) P2 would take a 10 MB file from P1 and compress it. What  forms of IPC would be best suited to implement these types of  information sharing? Describe your solution.Some acceptable answers:Answer #1: shared memory IPC would be most appropriate to communicate a large 10 MB file between P1 and P2.  To wake P2, we could block P2 on a receive() call using an IPC message-passing mechanism.  P1 writes a message to P2 using an IPC message-passing send() when P1 wishes to activate P2.   Answer #2: Alternatively, P2 could block on a message-passing receive(), then P1 could send only the name of the file using a message-passing send() to P2, whereupon P2 wakes up, reads the file name, then reads the 10 MB file from disk. The message-passing mechanism is only used to pass the file name, not the 10 MB file data.  Message passing is inefficient for passing large data files back and forth, and usually there is a limit on message size, e.g. 1 KB. Answer #3: Another way to ensure P2 is woken up by P1 is to apply a signal - a form of IPC that is limited to sending control information instead of large volumes of data - from P1 to P2.  P2 would have to register the appropriate signal handler, then go to sleep.  For example, SIGUSR1 is a user-definable signal that can be used by one process to wake another.  Answer #4:  A pipe is yet another form of IPC that could be used for signalling from P1 to P2.  P2 waits to receive the output from P1 by waiting on the pipe, e.g. gunzip filename | more.6. (+15) Suppose processes P0 and P1 share variable V1, and processes  P1 and  P2 share variable V2, while processes P0, P1 and P2 share V3.   Operations on V1 are limited to increment() and decrement().  Operations on V2 are limited to square() and squareroot().  Operations on V3 are  limited to sin() and cos().  Design a monitor-based solution that  synchronizes access to and manipulation of these variables between the  three processes so that race conditions are eliminated.Answer:  A possible solution is below:Monitor M1 { float V1,V2,V3;  increment() {V1++;} decrement(){V1--;} square() {V2*=V2;}  squareroot() {V2 = squareroot(V2);}  sin() {V3 = sin(V3);}  cos() {V3 = cos(V3);} init() {initialize V1, V2 and V3} }  Additional solutions involving passing in parameters are acceptable. Last modified: Monday, February 23, 2015, 
+
+
+2. (+15) Suppose task T1 has code C1  that must execute before task T2's code C2.  Design a solution that  enforces this ordering  
+using only condition variables, locks, and  integer variables.  Semaphores and monitors are not allowed.  
+
+Answer: This problem addresses the issue of signaling a CV before another task has  blocked waiting on a CV.  
+In order to deal with that problem, we have to add state similar to a semaphore in the form of an integer variable so that we can  
+remember that there has been a signal.  
+Here is a solution for pthreads that uses pthread_cond_wait():  
+int signalstate=0;  // shared state that remembers there has been a signalLock   
+mutex;  
+ConditionVariable CV;T1:C1;   
+lock(mutex);  
+signalstate++;  
+unlock(mutex);  
+signal(CV);  
+T2:  
+lock(mutex);  
+while(!signalstate) {  
+  pthread_cond_wait(&CV, &mutex);  
+}  
+unlock(mutex);  
+C2;    
+
+--pthread_cond_wait()'s behavior is critical to making this solution work.  pthread_cond_wait() atomically releases mutex and causes  
+the calling thread to block on the condition variable CV.  Atomically here means "atomically with respect to access by another thread  
+to the mutex and then the condition variable". That is, if another thread is able to acquire the mutex after the about-to-block thread  
+has released it, then a subsequent call to pthread_cond_signal() in that thread behaves as if it were issued after the about-to-block  
+thread has blocked.  This behavior is important because  if the mutex is released inside pthread_cond_wait() by say thread X,  
+then the other thread Y could begin and signal the CV before X's  pthread_cond_wait() is able to call wait on the CV, thereby causing X   
+to wait forever on the CV.  Instead, pthread_cond_wait() has the behavior that it performs two operations atomically  
+(releasing the mutex *and* blocking on the CV).  Hence, if X is within pthread_cond_wait(), it is not possible for Y to grab the mutex  
+and signal the CV before X blocks, which would block X forever.  Thus, X does not block forever.  
+
+
+3. (+15) Explain why the solution to the 3rd Readers/Writers problem is starvation-free.Answer: The starvation-free solution to the 2nd  
+R/W problem, also called the 3rd R/W problem, simply adds a readBlock semaphore initialized to 1 to the 1st R/W problem.  The solution is  
+given on slide 27 of the Chapter 5.3 slides, repeated below.  The 1st R/W problem is already starvation-free for readers, but not for  
+writers.  The addition of readBlock creates a solution that is also starvation-free for writers.  This is because if a writer arrives  
+while there are multiple current readers, then the writer will grab readBlock and sleep on wrt, which is held by the current readers.  
+Future readers will block on readBlock.  When the last current reader is done, it will signal the wrt lock, which wakes the writer so it  
+can proceed.  When the writer is done, it signals readBlock, which wakes any blocked readers so they can start reading.  Thus, writers  
+are no longer starved.  
+Semaphore wrt=1, mutex=1, readBlock=1;  
+int readcount=0;  
+Writer:  
+while(1) {  
+  wait(readBlock);  
+  wait(wrt);      // writing        
+  signal(wrt);  
+  signal(readBlock);  
+ }  
+Reader:  
+while(1) {  
+  wait(readBlock);  
+  wait(mutex);   
+  readcount++;  
+  if (readcount==1) wait(wrt);  
+    signal(mutex);  
+  signal(readBlock);   // reading     
+  wait(mutex);  
+  readcount--;  
+  if (readcount==0)  
+    signal(wrt);    
+  signal(mutex);    
+  }  
+
+
+4. a. (+10) Is the swap() function below thread-safe or not?  Explain your reasoning.
+int temp;  
+void swap(int *y, int *z){  
+int local;  
+local = temp;  
+temp = *y;  
+*y = *z;  
+*z = temp;  
+temp = local;  
+}  
+
+Answer: Swap is not thread-safe, because it is using a global variable temp.  For example, suppose thread T1 called swap(&m,&n),  
+where *m=1 and *n=2, and thread T2 called swap(&q,&r) where *q=7 and *r=4.  Let T1 execute inside swap(), up to just before the line   
+*z=temp.  At this point, temp=*y=1, and T1 desires to set *z=1 to complete the swap.  But if T1 is interrupted at this point, then T2  
+executes, then T2 sets temp=*y=7.  Now suppose T1 context switches back in, and executes *z=temp=7.  So the output of the swap() does  
+not swap the values 1 and 2, but instead produces a value of 7 for one of the variables.  Hence, the code is not thread safe.  
+
+b.  (+10) Suppose the swap() function above is called by the interrupt service  routine (ISR) below.  Assume that if swap() is   
+interrupted during normal execution, the ISR below is called and calls swap() again, reentering  swap() and executing in the context   
+of the interrupted thread.  Is  swap() reentrant?  Explain your reasoning.  
+void interrupt_service_routine(){  
+int a = 1, b = 2;  
+swap(&a, &b);  
+}  
+
+Answer:  This interrupt service routine is reentrant. We have to imagine two control flows: normal control flow of the program's   
+execution, which calls swap(); and exceptional control flow caused by say an interrupt, which triggers the interrupt service routine   
+to run, which also calls swap().  Suppose the first call to swap() by normal control flow of the executing program was to swap two  
+numbers, say 7 and 10.  Assume the entry value of the global variable temp was 5.  The expectation at the end of the routine is that   
+the global variable is returned to its initial value 5, and that the two numbers 7 and 10 are swapped correctly.  Now suppose in the  
+middle of swap() an interrupt occurs.  This would eventually trigger the interrupt_service_routine() to execute, which would call swap()  
+again, reentering it with new values of 1 and 2.  We assume in terms of reentrancy analysis that only this one thread can modify the global  
+variable temp, and there are no other threads.   The value of the global variable temp may no longer be 5 due to the swap proceeding,  
+e.g. if the swap() is interrupted after the line temp=*y, then temp's value is no longer 5, and in this example would be 7.  
+The second call to swap() must swap 1 and 2, and restore the global variable of temp upon exit to 7.  The 2nd call to swap()  
+has its own local variable, which is set to 7 to save the global variable.  The middle three lines swap the values 1 and 2 correctly  
+using temp, then temp is restored correctly on exit by temp=local.  Does the exceptional control flow's reentry of swap() adversely affect  
+the normal control flow's execution in swap()?  No, because the normal control flow has its own local variable and own parameters passed  
+into it on the stack, namely the values 7 and 10.   Its local variable takes a snapshot of the current value of global temp as it entered,  
+which is 5.  If swap() is interrupted at any point thereafter, the exceptional control flow will completely finish before the normal control  
+flow is allowed to resume execution, and the exceptional control flow will restore the value of temp to what it was at the point of interruption,  
+say 7, as we saw above.  Therefore, the normal control flow's swap() will proceed using the correct value of temp to correctly complete the swap  
+of the numbers 7 and 10, and restore the global temp to 5 upon exit.  The code is reentrant.  
+
+
+
+5. (+10) Suppose you are asked to design a server application consisting of two  processes P1 and P2, such that (1) P2 is to sleep until  
+woken up by P1,  whereupon (2) P2 would take a 10 MB file from P1 and compress it. What  forms of IPC would be best suited to implement  
+these types of  information sharing? Describe your solution.  
+
+Some acceptable answers:  
+
+Answer #1: shared memory IPC would be most appropriate to communicate a large 10 MB file between P1 and P2.  To wake P2, we could block P2   
+on a receive() call using an IPC message-passing mechanism.  P1 writes a message to P2 using an IPC message-passing send() when P1 wishes  
+to activate P2.  
+
+Answer #2: Alternatively, P2 could block on a message-passing receive(), then P1 could send only the name of the file using a message-passing  
+send() to P2, whereupon P2 wakes up, reads the file name, then reads the 10 MB file from disk. The message-passing mechanism is only used to  
+pass the file name, not the 10 MB file data.  Message passing is inefficient for passing large data files back and forth, and usually there is  
+a limit on message size, e.g. 1 KB.   
+
+Answer #3: Another way to ensure P2 is woken up by P1 is to apply a signal - a form of IPC that is limited to sending control information 
+instead of large volumes of data - from P1 to P2.  P2 would have to register the appropriate signal handler,then go to sleep.  For example,  
+SIGUSR1 is a user-definable signal that can be used by one process to wake another.  
+
+Answer #4:  A pipe is yet another form of IPC that could be used for signalling from P1 to P2.  P2 waits to receive the output from P1 by  
+waiting on the pipe, e.g. gunzip filename | more  
+
+
+
+6. (+15) Suppose processes P0 and P1 share variable V1, and processes  P1 and  P2 share  
+variable V2, while processes P0, P1 and P2 share V3.   Operations on V1 are limited to increment() and decrement().    
+Operations on V2 are limited to square() and squareroot().  Operations on V3 are  limited to sin() and cos(). 
+Design a monitor-based solution that  synchronizes access to and manipulation of these variables between the  three processes  
+so that race conditions are eliminated.  
+
+Answer:  A possible solution is below:  
+Monitor M1 {  
+float V1,V2,V3;  
+increment(){ 
+V1++; 
+}  
+decrement(){  
+V1--;  
+}  
+square()  
+{  
+V2*=V2;  
+}   
+squareroot() {  
+V2 = squareroot(V2);  
+}   
+sin() {  
+V3 = sin(V3);  
+}  
+cos() {  
+V3 = cos(V3);  
+}   
+init() {  
+initialize V1, V2 and V3  
+}  
+}  
+
+Additional solutions involving passing in parameters are acceptable. 
