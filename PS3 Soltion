@@ -2,7 +2,7 @@
 available for each of four resource types is R0=6, R1=4, R2=4, and R3=2. Is the system in a safe state? If not, then explain why not,  
 or if so, find a safe sequence. Show your work.  
 Maximum Claims:
-^ check pic PS3Q1A in the repo ..  
+^ check pic PS3Q1 in the repo ..  
 
 Need Matrix = Max - Allocated (for each row)  
 R0  R1  R2  R3  
@@ -36,7 +36,63 @@ Phil   1    1     1
 5                 1  
 
 Request Table:  
+Chopstick 12345Spoons  
+Phil 1      1  
+2            1  
+3             1  
+4               1 1  
+5      1  
 
 
+Work = Available  
+chopsticks, spoons: [5-5, 2-1] = [0,1]  
+Because all of the chopsticks are allocated, and philosopher 1 will not release his spoon (or chopstick) without getting chopstick 2,  
+the philosophers are in a state of deadlock. Allocating a spoon to philosopher 4 will not result in any more chopsticks being released,  
+so the system is still in a state of deadlock.  
 
 
+3. (+25) Consider the following set of processes, with the length of the CPU execution time given in seconds:
+Chopstick 12345Spoons Phil 11213141151Work = Available chopsticks, spoons: [5-5, 2-1] = [0,1]Because all of the chopsticks  
+are allocated, and philosopher 1 will not release his spoon (or chopstick) without getting chopstick 2, the philosophers are   
+in a state of deadlock. Allocating a spoon to philosopher 4 will not result in any more chopsticks being released, so the system is   
+still in a state of deadlock.  
+
+-->check PS3Q3 pic in the repo
+
+Draw four Gantt charts that illustrate the timeline of execution of the processes when scheduled according to FCFS, SJF,   
+nonpreemptive priority (priority 1 is most important), and round robin (time slice=1). Which one has the lowest average wait time?  
+Which one has the lowest average turnaround time?  
+
+Answer:  
+a.  the four Gantt charts are:  
+0                  10 11  13 14        19  
+FCFS  |    P1             |P2| P3|P4|   P5|  
+0  1   2    4       9                    19  
+SJF   |P2|P4| P3|  P5   |         P1          |  
+0  1         6                  16  18 19  
+PRI   |P2|  P5     |      P1           | P3|P4|  
+0                        5                       10                 14                      19  
+RR    |P1|P2|P3|P4|P5|P1|P3|P5|P1|P5|P1|P5|P1|P5|P1|P1|P1|P1|P1|  
+ties are broken using the lowest process ID number winningb. Waiting time FCFS SJF PRI RR   
+P1     0  9   6  9  
+P2    10  0   0  1  
+P3    11  2  16  5  
+P4    13  1  18  3  
+P5    14  4   1  9  
+SJF results in the lowest average waiting timec. Turnaround time  FCFS SJF PRI RR  
+P1    10 19  16 1  
+9P2    11  1   1  2  
+P3    13  4  18  7  
+P4    14  2  19  4  
+P5    19  9   6 14  
+SJF results in the lowest average turnaround time
+
+
+4. a. User-level threads are not schedulable by the kernel, so CFS only schedules P1's T1, P1's T2 and P2.  
+
+CPU Times Owed/Wait times:
+^check pic PS3Q4 in repo
+
+b. The system is fair at the level of tasks, i.e. kernel threads, but not applications.  Every schedulable thread gets exactly 1/3  
+of CPU.  But the system is not fair at the level of applications.  Application 1 (Process 1) gets 2/3 of CPU because it has two threads,  
+while Application 2 (Process 2) gets 1/3 of CPU.  This is why Linux introduced the idea of "groups" into scheduling.
