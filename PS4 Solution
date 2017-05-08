@@ -1,0 +1,41 @@
+
+
+1. (+12) Describe at
+least 3 general approaches in memory management towards solving the external
+fragmentation problem.
+(+4 for each points)  
+
+
+Ans:-
+
+Three general
+approaches in memory management towards solving the external fragmentation
+problem can be:
+
+1.Compacting: eliminates
+all fragments in memory by moving all used memory so that it is in a contiguous
+chunk. By moving all used memory to be one large chunk, there is now a large
+chunk of free memory that can be used by entire process address spaces and many
+more processes can now be fit in to memory.
+However, this process is very expensive and complicated, and can only be done
+if addresses are bound at run-time.
+
+2. Segmentation: breaks main memory into variable size chunks. This
+allows for the code, data, heap, and stack sections to all be centralized to
+their own section.
+
+3. Paging: This is the most efficient one to solve the external
+fragmentation problem. When one implements paging, they divide a process into pages,
+and fit individual pages into memory. This solves the external fragmentation
+problem because memory is divided up into equal size memory slots and pages are
+fit into these slots. Since a free memory slot is the size of a page, there is
+no wasted memory. Once a process is divided into pages and fit into memory,
+there is a page table kept for that process to keep track of where each page is
+in memory. The page table is usually stored in RAM, making for much 
+faster and less complicated accesses.
+
+4. Worst-fit policy is also a reasonable answer, because it delays
+fragmentation for the longest time.
+
+
+
