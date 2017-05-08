@@ -1,0 +1,26 @@
+1. (+25) To implement deadlock avoidance, the Banker's Algorithm is appliedto the following system, where the total number of resources   
+available for each of four resource types is R0=6, R1=4, R2=4, and R3=2. Is the system in a safe state? If not, then explain why not,  
+or if so, find a safe sequence. Show your work.  
+Maximum Claims:
+^ check pic PS3Q1A in the repo ..  
+
+Need Matrix = Max - Allocated (for each row)  
+R0  R1  R2  R3  
+P0    1  2  0  1  
+P1    0  1  0  2  
+P2    0  0  2  0   
+P3    2  2  0  0   
+P4    2  0  0  0   
+Work = Avail = [1,1,2,1]  
+Need[2] = [0,0,2,0] < Work (Finish[2] = TRUE)  
+Work = [2,2,2,1]Need[3] = [2,2,0,0] <= Work (Finish[3] = TRUE)  
+Work = [3,2,3,1]Need[4] = [2,0,0,0] <= Work (Finish[4] = TRUE)  
+Work=[3,3,3,2]Need[0]=[1,2,0,1]< = Work (Finish[0] = TRUE)  
+Work=[5,3,4,2]Need[1]=[0,1,0,2]< = Work (Finish[1]=TRUE)  
+Work=[6,4,4,2]For All i, Finish[i] = TRUE, so the system is in a safe state, with a safe sequence< P2,P3,P4,P0,P1>  
+Other safe sequences are <P2, followed by any permutation of P0, P1, P3, and P4>  
+
+
+2.  (+25 points) Suppose we have 5 dining philosophers and 5 shared chopsticks, and that the philosophers are circularly deadlocked.  Assume also that there are two serving spoons, one allocated to philopher 1, and the other available.  Assume that philosopher 4 wants a serving spoon.  Show how this situation can be modeled according to the various data structures, e.g. Allocation and Request matrices, used in the Deadlock detection algorithm.  Run the Deadlock detection algorithm on your model to prove that the dining philosophers are in deadlock.Allocation Table
+
+
