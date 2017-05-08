@@ -21,6 +21,22 @@ Work=[6,4,4,2]For All i, Finish[i] = TRUE, so the system is in a safe state, wit
 Other safe sequences are <P2, followed by any permutation of P0, P1, P3, and P4>  
 
 
-2.  (+25 points) Suppose we have 5 dining philosophers and 5 shared chopsticks, and that the philosophers are circularly deadlocked.  Assume also that there are two serving spoons, one allocated to philopher 1, and the other available.  Assume that philosopher 4 wants a serving spoon.  Show how this situation can be modeled according to the various data structures, e.g. Allocation and Request matrices, used in the Deadlock detection algorithm.  Run the Deadlock detection algorithm on your model to prove that the dining philosophers are in deadlock.Allocation Table
+2.  (+25 points) Suppose we have 5 dining philosophers and 5 shared chopsticks, and that the philosophers are circularly deadlocked.   
+Assume also that there are two serving spoons, one allocated to philopher 1, and the other available.  Assume that philosopher 4 wants  
+a serving spoon.  Show how this situation can be modeled according to the various data structures, e.g. Allocation and Request matrices,  
+used in the Deadlock detection algorithm.  Run the Deadlock detection algorithm on your model to prove that the dining philosophers are in  
+deadlock.  
+
+Allocation Table  
+Chopstick 12345Spoons  
+Phil   1    1     1   
+2              1  
+3               1  
+4                1  
+5                 1  
+
+Request Table:  
+
+
 
 
