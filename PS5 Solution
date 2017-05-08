@@ -1,0 +1,170 @@
+
+
+. [30 points]
+You are asked to allocate a file according to either a File
+Allocation Table (FAT) or multi-level indexed allocation (UNIX
+inode - triply indirect). Assume that the file is 2000 disk
+blocks long, there are 4 KB per disk block, each pointer in the
+FAT occupies 4 bytes, the first index block contains 15 entries
+(of which 12 are direct, and one each is singly indirect, doubly
+indirect, and triply indirect - see slides or textbook), every
+other index block contains 15 entries (may be indirect depending
+on the nesting level), each index block entry takes 4 bytes, and
+unused index blocks don't count in the total memory cost, though
+unusued entries in partially filled index blocks do count.
+
+How many bytes are used to lay out the file when using
+
+a. a FAT file system?
+b. a UNIX-style file system?
+
+ANSWER:
+
+a. In a FAT file system, there would be 4*2000 = 8000
+bytes to lay out the file.
+
+b.
+1st index block allocates 12 blocks,
+singly indirect block allocates 15 blocks,
+doubly indirect block allocates 15^2=225 blocks,
+triply indirect block allocates 15^3=3375 blocks, but we only need 2000,
+and we've already allocated 12+15+225= 252, so allocate 1748 blocks,
+which equates to roundup(1748/225)=8 two-level index blocks, with
+the last block partially filled with 173 blocks, which equates to
+roundup(173/15)=12 one-level index blocks, with 8 in the last block.
+
+so we need 1 + 1 + (1+15) + (1+7*16+(1+12)) = 144 index blocks
+Each index block occupies 15*4=60 bytes, so the total bytes used
+to layout the file in an indexed UNIX inode system = 144*60=8640 bytes.
+
+
+Now suppose that you wish to read the 1099'th byte of the file.
+Assume each of the following counts as one search operation:
+moving from one element to the next in a linked list; indexing
+into an index block; moving from index block to the next. How
+many searches are needed to read byte 1099 when using
+
+c. the same FAT file system?
+d. the same UNIX-style file system?
+
+ANSWER:
+
+c. We need to follow 1099 pointers in the FAT to find the
+pointer for the 1099th block. Then, assuming we are including the
+step of following the pointer from the FAT to the 1099th block to
+read, we also need to add 1 for that
+
+so either 1099 or 1100 searches, depending on your assumptions
+
+d. The 1099'th block is located in the triply indirect
+portion of the inode, so the indexed file system would require one
+search through the first inode, plus one jump to the triply indirect
+node, one search through the triply indirect index block, plus one
+jump to the doubly indirect index block, one search through the doubly
+indirect index block, plus one jump to the single-level index block,
+plus one search through the single-level index block
+
+That equals 7 searches. If you discount jumps, then that would be 4 searches.
+It's OK to count the final read from disk as an extra search, though
+technically
+it's not really a search.
+
+2. [20 points]
+Suppose you are given a flash memory consisting of 4 KB pages, and
+there are 1024 pages. How many bytes of memory would the OS
+need to keep track of free space in the worst case (all of flash
+memory is free) if
+
+a. a bitmap was used?
+b. a linked list was used? Assume 2 bytes/pointer.
+
+Under what conditions would a linked list be more memory-efficient
+than a bitmap?
+
+ANSWER:
+a. bitmap:
+with a bitmap, the OS uses 1 bit to signify if a page is free
+or allocated. This means that the OS needs 1024 bits, or 128
+bytes.
+
+b. Linked List:
+With a linked list, the OS maintains a pointer to each free
+page of memory. This means that the OS has 1024 pointers.
+Assuming 2 bytes/pointer this is 2048 bytes, or 2KB.
+
+A linked list would perform better than a bitmap if the filesystem
+was mostly allocated. Since the bitmap has to have a bit for each
+page, even allocated ones, it stays a constant size. If there was
+only a few free pages, the linked list would only be a few bytes,
+which would be much better than the 128 bytes needed for bitmap.
+
+3. [25 points]
+The read/write head of a disk is at track 97, moving towards track
+199 (the highest-numbered track on the disk), and the disk request
+queue contains read/write requests for sectors on tracks 84, 155,
+103, 96, and 197, respectively. Starting from the current head
+position, what is the total distance in tracks that the disk arm
+moves to satisfy all the pending requests for:
+
+a. FCFS scheduling
+b. SCAN scheduling
+c. LOOK scheduling
+
+ANSWER:
+
+start at 97, queue=84,155,103,96,197
+
+a. FCFS: 97-->;84-->;155-->;103-->t;96-->;197
+13 + 71 + 52 + 7 + 101
+= 244 tracks moved
+
+b. SCAN: 97-->;103-->;155-->;197-->;199-->;96-->;84
+6 + 52 + 42 + 2 + 103 + 12
+= 217 tracks
+
+c. LOOK: 97-->;103-->;155-->;197-->;96-->;84
+6 + 52 + 42 + 101 + 12
+= 213 tracks
+
+
+4. [25 points] Describe the SSH protocol in detail, i.e. describe the initial
+handshaking phase as well as the subsequent data messaging phase. When a user
+supplies their login password, is it encrypted by a public key or a symmetric
+key,
+and why? Explain why or why not SSH is resilient to eavesdropping attacks,
+man-in-the-middle attacks, and/or replay attacks.
+
+Answer:
+
+The initial handshaking phase of SSH consists of a user requesting to login to
+a
+server, and the server responding with its public key. The user is then asked
+to
+accept this public key or not. If the user accepts this public key, the user
+then
+initiates a negotiation process whereby both sides agree upon a symmetric
+key. The negotiation process could be as simple as the user choosing a random
+symmetric key, and sending the symmetric key encrypted with the server's
+public key to the server. The server will then decrypt this message with its
+private key to extract the symmetric key. A more complex negotiation process
+could use Diffie-Hellman to establish the symmetric key.
+
+After the handshaking, data is sent back and forth across the SSH session
+encrypted by the symmetric key. For example, the SSH user would send its
+password encrypted by the symmetric key to the server. The server would
+send its prompt back to the user encrypted by the symmetric key. Further
+commands from the user and results from the server are all encrypted by the
+symmetric key.
+
+The SSH approach is resilient to eavesdropping, because all messages are
+encrypted with the symmetric key, or with the public key during
+handshaking/bootstrapping. SSH is immune to replay attacks, because the
+session changes the symmetric key and hence the encrypted password every
+session, so it is not possible to replay an old encrypted password. SSH is not
+immune to MIM attacks, primarily because in most cases the SSH server does
+not present a certified public key (unlike SSL/TLS). So a MIM could present its
+own public key to spoof the server's public key, and the user has no easy way
+of verifying if the presented public key belongs to the server or the MIM.
+
+ 
+
